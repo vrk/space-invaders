@@ -13,7 +13,7 @@ class SpaceGame {
     this.canvas.height = CANVAS_HEIGHT;
     this.ctx = this.canvas.getContext('2d');
 
-    this.playerShip = new PlayerShip();
+    this.playerShip = new PlayerShip(this.onGameOver);
     this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet, this.onGameOver);
     this.enemyBullets = [];
   }

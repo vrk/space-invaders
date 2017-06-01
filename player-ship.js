@@ -5,10 +5,12 @@ const PLAYER_SHIP_RIGHT_BOUND = CANVAS_WIDTH - PLAYER_SHIP_WIDTH;
 const PLAYER_SHIP_LEFT_BOUND = 0;
 
 class PlayerShip extends Rectangle {
-  constructor() {
+  constructor(onGameOver) {
     const startX = (CANVAS_WIDTH - PLAYER_SHIP_WIDTH) / 2;
     const startY = CANVAS_HEIGHT - PLAYER_SHIP_HEIGHT * 1.5;
     super(startX, startY, PLAYER_SHIP_WIDTH, PLAYER_SHIP_HEIGHT)
+    
+    this.onGameOver = onGameOver;
 
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onKeyUp = this.onKeyUp.bind(this);
@@ -30,6 +32,7 @@ class PlayerShip extends Rectangle {
     const newX = Math.max(
       Math.min(this.x + this.xVelocity, PLAYER_SHIP_RIGHT_BOUND), PLAYER_SHIP_LEFT_BOUND);
     this.x = newX;
+
   }
 
   resolveCollisions(enemyBullets) {
@@ -42,6 +45,10 @@ class PlayerShip extends Rectangle {
         bullet.kill();
       }
     });
+
+    if (this.health <= 0) {
+      this.onGameOver();
+    }
   }
 
   render(ctx) {
