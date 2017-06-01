@@ -1,16 +1,14 @@
 const PLAYER_SHIP_HEIGHT = 20;
 const PLAYER_SHIP_WIDTH = 50;
-const PLAYER_SHIP_UPDATE_PIXELS_PER_TICK = 7;
+const PLAYER_SHIP_UPDATE_PIXELS_PER_TICK = 5;
 const PLAYER_SHIP_RIGHT_BOUND = CANVAS_WIDTH - PLAYER_SHIP_WIDTH;
 const PLAYER_SHIP_LEFT_BOUND = 0;
 
 class PlayerShip extends Rectangle {
-  constructor(onGameOver) {
+  constructor() {
     const startX = (CANVAS_WIDTH - PLAYER_SHIP_WIDTH) / 2;
     const startY = CANVAS_HEIGHT - PLAYER_SHIP_HEIGHT * 1.5;
     super(startX, startY, PLAYER_SHIP_WIDTH, PLAYER_SHIP_HEIGHT)
-    
-    this.onGameOver = onGameOver;
 
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onKeyUp = this.onKeyUp.bind(this);
@@ -45,10 +43,6 @@ class PlayerShip extends Rectangle {
         bullet.kill();
       }
     });
-
-    if (this.health <= 0) {
-      this.onGameOver();
-    }
   }
 
   render(ctx) {
@@ -60,6 +54,10 @@ class PlayerShip extends Rectangle {
       ctx.fillStyle = 'red';
     }
     ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+
+  isAlive() {
+    return this.health > 0;
   }
 
   // Private

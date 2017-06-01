@@ -4,7 +4,6 @@ const SECONDS_PER_TICK = 1 / FPS;
 class SpaceGame {
   constructor() {
     this.onNewEnemyBullet = this.onNewEnemyBullet.bind(this);
-    this.onGameOver = this.onGameOver.bind(this);
 
     this.startTime = null;
     this.gameEnded = false;
@@ -13,8 +12,9 @@ class SpaceGame {
     this.canvas.height = CANVAS_HEIGHT;
     this.ctx = this.canvas.getContext('2d');
 
-    this.playerShip = new PlayerShip(this.onGameOver);
-    this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet, this.onGameOver);
+    this.playerShip = new PlayerShip();
+    this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet);
+    this.barriers = this.constructBarriers();
     this.enemyBullets = [];
   }
 
@@ -43,6 +43,8 @@ class SpaceGame {
       this.enemyFleet.update(ticksDelta);
       this.enemyFleet.render(this.ctx);
 
+      this.barriers.forEach(barrier => barrier.render(this.ctx));
+
       // Update bullet positions.
       this.enemyBullets.forEach(bullet => bullet.update(ticksDelta));
       this.enemyBullets = this.enemyBullets.filter(bullet => bullet.isAlive());
@@ -50,10 +52,13 @@ class SpaceGame {
 
       // Resolve enemy bullet collisions.
       this.playerShip.resolveCollisions(this.enemyBullets);
+      this.barriers.forEach(
+          barrier => barrier.resolveCollisions(this.enemyBullets));
       this.enemyBullets = this.enemyBullets.filter(bullet => bullet.isAlive());
+      this.barriers = this.barriers.filter(barrier => barrier.isAlive());
 
       ticksLastTime = ticksSinceStart;
-      if (!this.gameEnded) {
+      if (!this.enemyFleet.hasConquered() && this.playerShip.isAlive()) {
         requestAnimationFrame(gameLoop);
       } else {
         this.clearScreen();
@@ -73,7 +78,21 @@ class SpaceGame {
     this.enemyBullets.push(bullet);
   }
 
-  onGameOver() {
-    this.gameEnded = true;
+  constructBarriers() {
+    const BARRIER_MARGIN = 50;
+    const NUMBER_BARRIERS = 4;
+    const BARRIER_Y_POSITION = CANVAS_HEIGHT * 0.75;
+
+    const barriers = [];
+
+    const maxWidth = CANVAS_WIDTH - BARRIER_MARGIN * 2;
+    const sectionWidth = maxWidth / NUMBER_BARRIERS;
+    const xOffset = (sectionWidth - BARRIER_WIDTH) / 2;
+
+    for (let i = 0; i < NUMBER_BARRIERS; i++) {
+      const barrier = new Barrier(i * (sectionWidth) + xOffset + BARRIER_MARGIN, BARRIER_Y_POSITION);
+      barriers.push(barrier);
+    }
+    return barriers;
   }
 }

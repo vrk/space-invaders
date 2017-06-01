@@ -3,11 +3,12 @@ const ENEMY_BOX_WIDTH = 30;
 const ENEMY_COL_MARGIN = 7;
 const ENEMY_ROW_MARGIN = 18;
 const UPDATE_FREQUENCY_START = 10;
+const ENEMY_SHOOT_PROBABILTY = 0.3;
+const ENEMY_MAYBE_SHOOT_FREQUENCY = 30;
 
 class EnemyFleet {
-  constructor(onNewBullet, onGameOver) {
+  constructor(onNewBullet) {
     this.onNewBullet = onNewBullet;
-    this.onGameOver = onGameOver;
 
     this.onBumpedEdge = this.onBumpedEdge.bind(this);
     this.onReachedEnd = this.onReachedEnd.bind(this);
@@ -23,6 +24,7 @@ class EnemyFleet {
     this.ticksSoFar = 0;
     this.updateFrequency = UPDATE_FREQUENCY_START;
     this.needsNextRow = false;
+    this.conquered = false;
 
     for (let col = 0; col < 11; col++) {
       const startX = ENEMY_COL_MARGIN + (ENEMY_BOX_WIDTH + ENEMY_COL_MARGIN) * col;
@@ -40,16 +42,20 @@ class EnemyFleet {
     this.ticksSoFar += dt;
 
     // Choose a random shooter.
-    if (this.ticksSoFar % (this.updateFrequency * 3) == 0) {
+
+    if (this.ticksSoFar % (ENEMY_MAYBE_SHOOT_FREQUENCY) == 0) {
+      const shouldShoot = Math.random() < ENEMY_SHOOT_PROBABILTY;
+      if (shouldShoot) {
+        const shooter = this.chooseRandomShooter();
+        const bullet = shooter.createBullet();
+        this.onNewBullet(bullet);
+        shooter.highlight();
+      }
       // Kill off shooters for testing
       // const shooterOne = this.chooseRandomShooter();
       // if (this.enemies.length > 3) {
       //   shooterOne.kill();
       // }
-      const shooter = this.chooseRandomShooter();
-      const bullet = shooter.createBullet();
-      this.onNewBullet(bullet);
-      shooter.highlight();
     }
 
     if (this.ticksSoFar % this.updateFrequency == 0) {
@@ -60,11 +66,14 @@ class EnemyFleet {
         this.enemies.forEach(enemy => enemy.advanceX(dt));
       }
     }
-    // this.enemies = this.enemies.filter( enemy => enemy.isAlive() );
   }
 
   render(ctx) {
     this.enemies.forEach(enemy => enemy.render(ctx));
+  }
+
+  hasConquered() {
+    return this.conquered;
   }
 
   // Private methods
@@ -73,7 +82,7 @@ class EnemyFleet {
   }
 
   onReachedEnd() {
-    this.onGameOver();
+    this.conquered = true;
   }
 
   chooseRandomShooter() {
