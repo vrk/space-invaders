@@ -5,6 +5,7 @@ const CANVAS_HEIGHT = 500;
 
 class SpaceGame {
   constructor() {
+    this.onNewEnemyBullet = this.onNewEnemyBullet.bind(this);
     this.onGameOver = this.onGameOver.bind(this);
 
     this.startTime = null;
@@ -15,7 +16,8 @@ class SpaceGame {
     this.ctx = this.canvas.getContext('2d');
 
     this.playerShip = new PlayerShip();
-    this.enemyFleet = new EnemyFleet(this.onGameOver);
+    this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet, this.onGameOver);
+    this.enemyBullets = [];
   }
 
   start() {
@@ -36,13 +38,21 @@ class SpaceGame {
       const secondsSinceStart = (timestamp - this.startTime) / 1000;
       const ticksSinceStart = Math.floor(secondsSinceStart / SECONDS_PER_TICK);
       const ticksDelta = ticksSinceStart - ticksLastTime;
-      //console.log(ticksDelta);
 
       this.playerShip.update(ticksDelta);
       this.playerShip.render(this.ctx);
 
       this.enemyFleet.update(ticksDelta);
       this.enemyFleet.render(this.ctx);
+
+      // Update bullet positions.
+      this.enemyBullets.forEach(bullet => bullet.update(ticksDelta));
+      this.enemyBullets = this.enemyBullets.filter(bullet => bullet.isAlive());
+      this.enemyBullets.forEach(bullet => bullet.render(this.ctx));
+
+      // Resolve enemy bullet collisions.
+      this.playerShip.resolveCollisions(this.enemyBullets);
+      this.enemyBullets = this.enemyBullets.filter(bullet => bullet.isAlive());
 
       ticksLastTime = ticksSinceStart;
       if (!this.gameEnded) {
@@ -61,8 +71,58 @@ class SpaceGame {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
+  onNewEnemyBullet(bullet) {
+    this.enemyBullets.push(bullet);
+  }
+
   onGameOver() {
     this.gameEnded = true;
+  }
+}
+
+class Rectangle {
+  constructor(x, y, width, height) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+  }
+
+  detectCollision(other) {
+    const myLeftX = this.x;
+    const myRightX = this.x + this.width;
+    const myTopY = this.y;
+    const myBottomY = this.y + this.height;
+
+    const otherLeftX = other.x;
+    const otherRightX = other.x + other.width;
+    const otherTopY = other.y;
+    const otherBottomY = other.y + other.height;
+
+    // Miss left: |-----|  *****
+    // If my box starts after their box ends:
+    if (myLeftX > otherRightX) {
+      return false;
+    }
+
+    // Miss right: *****  |----|
+    // If their box starts after my box ends:
+    if (otherLeftX > myRightX) {
+      return false;
+    }
+
+    // If my box starts below their box:
+    if (myTopY > otherBottomY) {
+      return false;
+    }
+
+    // If their box starts below my box:
+    if (otherTopY > myBottomY) {
+      return false;
+    }
+
+    // Otherwise, there must be a collision
+    return true;
   }
 }
 
@@ -72,8 +132,12 @@ const PLAYER_SHIP_UPDATE_PIXELS_PER_TICK = 7;
 const PLAYER_SHIP_RIGHT_BOUND = CANVAS_WIDTH - PLAYER_SHIP_WIDTH;
 const PLAYER_SHIP_LEFT_BOUND = 0;
 
-class PlayerShip {
+class PlayerShip extends Rectangle {
   constructor() {
+    const startX = (CANVAS_WIDTH - PLAYER_SHIP_WIDTH) / 2;
+    const startY = CANVAS_HEIGHT - PLAYER_SHIP_HEIGHT * 1.5;
+    super(startX, startY, PLAYER_SHIP_WIDTH, PLAYER_SHIP_HEIGHT)
+
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onKeyUp = this.onKeyUp.bind(this);
   }
@@ -85,8 +149,7 @@ class PlayerShip {
   }
 
   restart() {
-    this.x = (CANVAS_WIDTH - PLAYER_SHIP_WIDTH) / 2;
-    this.y = CANVAS_HEIGHT - PLAYER_SHIP_HEIGHT * 1.5;
+    this.health = 3;
     this.xVelocity = 0;
     this.arrowsPressed = [];
   }
@@ -97,9 +160,27 @@ class PlayerShip {
     this.x = newX;
   }
 
+  resolveCollisions(enemyBullets) {
+    if (enemyBullets.length === 0) {
+      return;
+    }
+    enemyBullets.forEach(bullet => {
+      if (this.detectCollision(bullet)) {
+        this.health--;
+        bullet.kill();
+      }
+    });
+  }
+
   render(ctx) {
-    ctx.fillStyle = 'yellow';
-    ctx.fillRect(this.x, this.y, PLAYER_SHIP_WIDTH, PLAYER_SHIP_HEIGHT);
+    if (this.health === 3) {
+      ctx.fillStyle = 'hotpink';
+    } else if (this.health === 2) {
+      ctx.fillStyle = 'yellow';
+    } else {
+      ctx.fillStyle = 'red';
+    }
+    ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 
   // Private
@@ -126,9 +207,11 @@ const ENEMY_BOX_HEIGHT = 20;
 const ENEMY_BOX_WIDTH = 30;
 const ENEMY_COL_MARGIN = 7;
 const ENEMY_ROW_MARGIN = 18;
+const UPDATE_FREQUENCY_START = 10;
 
 class EnemyFleet {
-  constructor(onGameOver) {
+  constructor(onNewBullet, onGameOver) {
+    this.onNewBullet = onNewBullet;
     this.onGameOver = onGameOver;
 
     this.onBumpedEdge = this.onBumpedEdge.bind(this);
@@ -143,7 +226,7 @@ class EnemyFleet {
     this.enemies = [];
     this.enemiesByColRow = [];
     this.ticksSoFar = 0;
-    this.updateFrequency = 5;
+    this.updateFrequency = UPDATE_FREQUENCY_START;
     this.needsNextRow = false;
 
     for (let col = 0; col < 11; col++) {
@@ -161,29 +244,32 @@ class EnemyFleet {
   update(dt) {
     this.ticksSoFar += dt;
 
-    const liveEnemies = this.enemies.filter( enemy => enemy.isAlive() );
+    // Choose a random shooter.
+    if (this.ticksSoFar % (this.updateFrequency * 3) == 0) {
+      // Kill off shooters for testing
+      // const shooterOne = this.chooseRandomShooter();
+      // if (this.enemies.length > 3) {
+      //   shooterOne.kill();
+      // }
+      const shooter = this.chooseRandomShooter();
+      const bullet = shooter.createBullet();
+      this.onNewBullet(bullet);
+      shooter.highlight();
+    }
 
-    if (this.needsNextRow) {
-      liveEnemies.forEach(enemy => enemy.advanceRow());
-      this.needsNextRow = false;
-    }
-    // if (this.ticksSoFar % (this.updateFrequency * 3) == 0) {
-    //   const shooterOne = this.chooseRandomShooter();
-    //   if (liveEnemies.length > 3) {
-    //     shooterOne.kill();
-    //   }
-    //   const shooterTwo = this.chooseRandomShooter();
-    //   shooterTwo.highlight();
-    // }
-    // liveEnemies = this.enemies.filter( enemy => enemy.isAlive() );
     if (this.ticksSoFar % this.updateFrequency == 0) {
-      liveEnemies.forEach(enemy => enemy.update(dt));
+      if (this.needsNextRow) {
+        this.enemies.forEach(enemy => enemy.advanceY());
+        this.needsNextRow = false;
+      } else {
+        this.enemies.forEach(enemy => enemy.advanceX(dt));
+      }
     }
+    // this.enemies = this.enemies.filter( enemy => enemy.isAlive() );
   }
 
   render(ctx) {
-    const liveEnemies = this.enemies.filter( enemy => enemy.isAlive() );
-    liveEnemies.forEach(enemy => enemy.render(ctx));
+    this.enemies.forEach(enemy => enemy.render(ctx));
   }
 
   // Private methods
@@ -218,10 +304,9 @@ class EnemyFleet {
 const ENEMY_X_MOVE_WIDTH = 5;
 const TICKS_HIGHLIGHTED = 1;
 
-class Enemy {
+class Enemy extends Rectangle {
   constructor(startX, startY, onBumpedEdge, onReachedEnd) {
-    this.x = startX;
-    this.y = startY;
+    super(startX, startY, ENEMY_BOX_WIDTH, ENEMY_BOX_HEIGHT);
     this.onBumpedEdge = onBumpedEdge;
     this.onReachedEnd = onReachedEnd;
     this.color = 'white';
@@ -233,7 +318,7 @@ class Enemy {
     this.alive = true;
   }
 
-  advanceRow() {
+  advanceY() {
     console.assert(this.alive);
 
     // Reverse direction.
@@ -249,11 +334,11 @@ class Enemy {
     }
   }
 
-  update(dt) {
+  advanceX(dt) {
     console.assert(this.alive);
 
     const leftBound = ENEMY_COL_MARGIN;
-    const rightBound = CANVAS_WIDTH - ENEMY_BOX_WIDTH - ENEMY_COL_MARGIN;
+    const rightBound = CANVAS_WIDTH - this.height - ENEMY_COL_MARGIN;
 
     const newX = this.x + this.xVelocity;
     const nextX = this.x + 2 * this.xVelocity;
@@ -285,7 +370,7 @@ class Enemy {
     console.assert(this.alive);
 
     ctx.fillStyle = this.color;
-    ctx.fillRect(this.x, this.y, ENEMY_BOX_WIDTH, ENEMY_BOX_HEIGHT);
+    ctx.fillRect(this.x, this.y, this.width, this.height);
   }
 
   highlight() {
@@ -300,8 +385,52 @@ class Enemy {
   isAlive() {
     return this.alive;
   }
+
+  createBullet() {
+    const bulletX = this.x + this.width / 2;
+    const bulletY = this.y + this.height / 2;
+    return new Bullet(bulletX, bulletY);
+  }
 }
 
+const BULLET_Y_VELOCITY = 5;
+const BULLET_SIZE = 3;
+
+class Bullet extends Rectangle {
+  constructor(startX, startY) {
+    super(startX, startY, BULLET_SIZE, BULLET_SIZE);
+    this.color = 'white';
+
+    this.yVelocity = BULLET_Y_VELOCITY;
+    this.alive = true;
+  }
+
+  update(dt) {
+    console.assert(this.alive);
+    const yBound = CANVAS_HEIGHT - BULLET_SIZE;
+    const newY = this.y + this.yVelocity;
+
+    if (newY > yBound) {
+      this.kill();
+    }
+    this.y = newY;
+  }
+
+  render(ctx) {
+    console.assert(this.alive);
+
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+
+  kill() {
+    this.alive = false;
+  }
+
+  isAlive() {
+    return this.alive;
+  }
+}
 
 ////////////////////////////////
 
