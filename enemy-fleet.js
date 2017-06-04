@@ -4,7 +4,7 @@ const ENEMY_COL_MARGIN = 7;
 const ENEMY_ROW_MARGIN = 18;
 const NUMBER_COLUMNS = 11;
 const NUMBER_ROWS = 5;
-const FLEET_START_Y = 20;
+const FLEET_START_Y = 150;
 const FLEET_WIDTH = (NUMBER_COLUMNS - 1) * ENEMY_COL_MARGIN + NUMBER_COLUMNS * ENEMY_BOX_WIDTH
 const FLEET_START_X = (FLEET_WIDTH - 2 * ENEMY_COL_MARGIN) / 4;
 const UPDATE_FREQUENCY_START = 45;
@@ -12,26 +12,25 @@ const UPDATE_FREQUENCY_MIN = 4;
 const ENEMY_SHOOT_PROBABILTY = 0.5;
 const ENEMY_MAYBE_SHOOT_FREQUENCY = 120;
 
-
 class EnemyFleet {
-  constructor(onNewBullet) {
+  constructor(onNewBullet, onEnemyKilled) {
     this.onNewBullet = onNewBullet;
+    this.onEnemyKilled = onEnemyKilled;
 
     this.onBumpedEdge = this.onBumpedEdge.bind(this);
     this.onReachedEnd = this.onReachedEnd.bind(this);
-    this.numberKilled = 0;
   }
 
   start() {
     this.restart();
   }
 
-
   restart() {
     // All living invaders in a list.
     this.enemies = [];
     // All enemies (living and dead) stored by position in grid
     this.enemiesByColRow = [];
+    this.numberKilled = 0;
 
     this.ticksSoFar = 0;
     this.ticksSinceLastSpeedUp = 0;
@@ -61,6 +60,7 @@ class EnemyFleet {
         enemy.kill();
         bullet.kill();
         this.numberKilled++;
+        this.onEnemyKilled();
       }
     });
     this.enemies = this.enemies.filter(enemy => enemy.isAlive());
@@ -80,14 +80,12 @@ class EnemyFleet {
           const shooter = this.chooseRandomShooter();
           const bullet = shooter.createBullet();
           this.onNewBullet(bullet);
-          console.log('render');
           shooter.highlight();
         }
       }
     }
 
     if (this.ticksSinceLastSpeedUp % this.updateFrequency === 0) {
-      console.log(this.updateFrequency);
       if (this.needsNextRow) {
         this.enemies.forEach(enemy => enemy.advanceY());
         this.needsNextRow = false;
@@ -109,6 +107,10 @@ class EnemyFleet {
 
   hasConquered() {
     return this.conquered;
+  }
+
+  isDefeated() {
+    return this.enemies.length === 0;
   }
 
   // Private methods

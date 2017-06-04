@@ -5,6 +5,7 @@ class SpaceGame {
   constructor() {
     this.onNewEnemyBullet = this.onNewEnemyBullet.bind(this);
     this.onNewPlayerBullet = this.onNewPlayerBullet.bind(this);
+    this.onEnemyKilled = this.onEnemyKilled.bind(this);
 
     this.startTime = null;
     this.gameEnded = false;
@@ -14,9 +15,11 @@ class SpaceGame {
     this.ctx = this.canvas.getContext('2d');
 
     this.playerShip = new PlayerShip(this.onNewPlayerBullet);
-    this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet);
+    this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet, this.onEnemyKilled);
     this.barriers = this.constructBarriers();
     this.enemyBullets = [];
+
+    this.scoreKeeper = new ScoreKeeper();
   }
 
   start() {
@@ -26,6 +29,13 @@ class SpaceGame {
 
     // Begin loop.
     this.startGameLoop();
+  }
+
+  nextLevel() {
+    this.playerShip.restart();
+    this.enemyFleet.restart();
+    this.enemyBullets = [];
+    this.playerBullet = null;
   }
 
   startGameLoop() {
@@ -45,6 +55,8 @@ class SpaceGame {
       this.enemyFleet.render(this.ctx);
 
       this.barriers.forEach(barrier => barrier.render(this.ctx));
+
+      this.scoreKeeper.render(this.ctx);
 
       // Look to see if there's a player bullet, and update if so.
       if (this.playerBullet) {
@@ -81,8 +93,12 @@ class SpaceGame {
 
       ticksLastTime = ticksSinceStart;
       if (!this.enemyFleet.hasConquered() && this.playerShip.isAlive()) {
+        if (this.enemyFleet.isDefeated()) {
+          this.nextLevel();
+        }
         requestAnimationFrame(gameLoop);
       } else {
+        // Game over
         this.clearScreen();
       }
     };
@@ -102,6 +118,10 @@ class SpaceGame {
 
   onNewPlayerBullet(bullet) {
     this.playerBullet = bullet;
+  }
+
+  onEnemyKilled() {
+    this.scoreKeeper.update();
   }
 
   constructBarriers() {
