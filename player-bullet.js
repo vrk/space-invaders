@@ -1,21 +1,21 @@
-const BULLET_Y_VELOCITY = 5;
-const BULLET_SIZE = 5;
+const PLAYER_BULLET_Y_VELOCITY = 9;
+const PLAYER_BULLET_SIZE = 5;
 
-class Bullet extends Rectangle {
+class PlayerBullet extends Rectangle {
   constructor(startX, startY) {
-    super(startX, startY, BULLET_SIZE, BULLET_SIZE);
+    super(startX, startY, PLAYER_BULLET_SIZE, PLAYER_BULLET_SIZE);
     this.color = 'white';
 
-    this.yVelocity = BULLET_Y_VELOCITY;
+    this.yVelocity = -PLAYER_BULLET_Y_VELOCITY;
     this.alive = true;
   }
 
   update(dt) {
     console.assert(this.alive);
-    const yBound = CANVAS_HEIGHT - BULLET_SIZE;
+    const yBound = 0;
     const newY = this.y + this.yVelocity;
 
-    if (newY > yBound) {
+    if (newY < yBound) {
       this.kill();
     }
     this.y = newY;

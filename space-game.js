@@ -4,6 +4,7 @@ const SECONDS_PER_TICK = 1 / FPS;
 class SpaceGame {
   constructor() {
     this.onNewEnemyBullet = this.onNewEnemyBullet.bind(this);
+    this.onNewPlayerBullet = this.onNewPlayerBullet.bind(this);
 
     this.startTime = null;
     this.gameEnded = false;
@@ -12,7 +13,7 @@ class SpaceGame {
     this.canvas.height = CANVAS_HEIGHT;
     this.ctx = this.canvas.getContext('2d');
 
-    this.playerShip = new PlayerShip();
+    this.playerShip = new PlayerShip(this.onNewPlayerBullet);
     this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet);
     this.barriers = this.constructBarriers();
     this.enemyBullets = [];
@@ -45,17 +46,38 @@ class SpaceGame {
 
       this.barriers.forEach(barrier => barrier.render(this.ctx));
 
+      // Look to see if there's a player bullet, and update if so.
+      if (this.playerBullet) {
+        this.playerBullet.update(ticksDelta);
+      }
+      this.filterBulletsByLiving();
+      if (this.playerBullet) {
+        this.playerBullet.render(this.ctx);
+      }
+
       // Update bullet positions.
       this.enemyBullets.forEach(bullet => bullet.update(ticksDelta));
       this.enemyBullets = this.enemyBullets.filter(bullet => bullet.isAlive());
       this.enemyBullets.forEach(bullet => bullet.render(this.ctx));
 
+      // Resolve player bullet collisions.
+      this.enemyFleet.resolveCollisions(this.playerBullet);
+
       // Resolve enemy bullet collisions.
       this.playerShip.resolveCollisions(this.enemyBullets);
+
+      // Filter bullets by living.
+      this.filterBulletsByLiving();
+
+      // Resolve collisions to barriers: either bullet can collide into it.
       this.barriers.forEach(
-          barrier => barrier.resolveCollisions(this.enemyBullets));
-      this.enemyBullets = this.enemyBullets.filter(bullet => bullet.isAlive());
+          barrier => barrier.resolveEnemyCollisions(this.enemyBullets));
+      this.barriers.forEach(
+          barrier => barrier.resolvePlayerCollisions(this.playerBullet));
       this.barriers = this.barriers.filter(barrier => barrier.isAlive());
+
+      // Filter bullets by living.
+      this.filterBulletsByLiving();
 
       ticksLastTime = ticksSinceStart;
       if (!this.enemyFleet.hasConquered() && this.playerShip.isAlive()) {
@@ -78,8 +100,12 @@ class SpaceGame {
     this.enemyBullets.push(bullet);
   }
 
+  onNewPlayerBullet(bullet) {
+    this.playerBullet = bullet;
+  }
+
   constructBarriers() {
-    const BARRIER_MARGIN = 50;
+    const BARRIER_MARGIN = 10;
     const NUMBER_BARRIERS = 4;
     const BARRIER_Y_POSITION = CANVAS_HEIGHT * 0.75;
 
@@ -94,5 +120,13 @@ class SpaceGame {
       barriers.push(barrier);
     }
     return barriers;
+  }
+
+  filterBulletsByLiving() {
+    // Filter bullets by living.
+    this.enemyBullets = this.enemyBullets.filter(bullet => bullet.isAlive());
+    if (this.playerBullet && !this.playerBullet.isAlive()) {
+      this.playerBullet = null;
+    }
   }
 }

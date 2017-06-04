@@ -8,14 +8,16 @@ class Barrier extends Rectangle {
     this.health = BARRIER_MAX_HEALTH;
   }
 
-  resolveCollisions(bullets) {
+  resolveEnemyCollisions(bullets) {
     if (bullets.length === 0) {
       return;
     }
     bullets.forEach(bullet => {
-      if (this.detectCollision(bullet)) {
+      // Collides when bullet is touching or if it's moved below us.
+      if (this.detectCollision(bullet) ||
+          this.intersectsX(bullet) && bullet.isBelow(this)) {
         this.health--;
-        const height = (this.health / BARRIER_MAX_HEALTH) * this.height;
+        const height = Math.ceil((this.health / BARRIER_MAX_HEALTH) * BARRIER_HEIGHT);
         const diff = this.height - height;
         this.y += diff;
         this.height = height;
@@ -23,6 +25,21 @@ class Barrier extends Rectangle {
       }
     });
   }
+
+  resolvePlayerCollisions(bullet) {
+    if (!bullet) {
+      return;
+    }
+    // Collides when bullet is touching or if it's moved above us..
+    if (this.detectCollision(bullet) ||
+        this.intersectsX(bullet) && bullet.isAbove(this)) {
+      this.health--;
+      const height = Math.floor((this.health / BARRIER_MAX_HEALTH) * BARRIER_HEIGHT);
+      this.height = height;
+      bullet.kill();
+    }
+  }
+
 
   isAlive() {
     return this.health > 0;

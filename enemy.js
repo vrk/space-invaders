@@ -1,5 +1,5 @@
 const ENEMY_X_MOVE_WIDTH = 5;
-const TICKS_HIGHLIGHTED = 1;
+const TICKS_HIGHLIGHTED = 10;
 
 class Enemy extends Rectangle {
   constructor(startX, startY, onBumpedEdge, onReachedEnd) {
@@ -47,6 +47,10 @@ class Enemy extends Rectangle {
     console.assert(newX >= leftBound);
     console.assert(newX <= rightBound);
     this.x = newX;
+  }
+
+  render(ctx) {
+    console.assert(this.alive);
 
     // Update color if we're supposed to be highlighted.
     if (this.shouldHighlight) {
@@ -58,13 +62,9 @@ class Enemy extends Rectangle {
         if (this.highlightTicks === 0) {
           this.color = 'red';
         }
-        this.highlightTicks += dt;
+        this.highlightTicks++;
       }
     }
-  }
-
-  render(ctx) {
-    console.assert(this.alive);
 
     ctx.fillStyle = this.color;
     ctx.fillRect(this.x, this.y, this.width, this.height);

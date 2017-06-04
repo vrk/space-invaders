@@ -9,13 +9,9 @@ class Rectangle {
   detectCollision(other) {
     const myLeftX = this.x;
     const myRightX = this.x + this.width;
-    const myTopY = this.y;
-    const myBottomY = this.y + this.height;
 
     const otherLeftX = other.x;
     const otherRightX = other.x + other.width;
-    const otherTopY = other.y;
-    const otherBottomY = other.y + other.height;
 
     // Miss left: |-----|  *****
     // If my box starts after their box ends:
@@ -30,16 +26,49 @@ class Rectangle {
     }
 
     // If my box starts below their box:
-    if (myTopY > otherBottomY) {
+    if (this.isBelow(other)) {
       return false;
     }
 
     // If their box starts below my box:
-    if (otherTopY > myBottomY) {
+    if (this.isAbove(other)) {
       return false;
     }
 
     // Otherwise, there must be a collision
     return true;
+  }
+
+  intersectsX(other) {
+    const myLeftX = this.x;
+    const myRightX = this.x + this.width;
+
+    const otherLeftX = other.x;
+    const otherRightX = other.x + other.width;
+
+    // Miss left: |-----|  *****
+    // If my box starts after their box ends:
+    if (myLeftX > otherRightX) {
+      return false;
+    }
+
+    // Miss right: *****  |----|
+    // If their box starts after my box ends:
+    if (otherLeftX > myRightX) {
+      return false;
+    }
+    return true;
+  }
+
+  isAbove(other) {
+    const myBottomY = this.y + this.height;
+    const otherTopY = other.y;
+    return otherTopY > myBottomY;
+  }
+
+  isBelow(other) {
+    const myTopY = this.y;
+    const otherBottomY = other.y + other.height;
+    return myTopY > otherBottomY;
   }
 }
