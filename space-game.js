@@ -2,33 +2,35 @@ const FPS = 60;
 const SECONDS_PER_TICK = 1 / FPS;
 
 class SpaceGame {
-  constructor() {
+  constructor(canvas, onGameOver) {
     this.onNewEnemyBullet = this.onNewEnemyBullet.bind(this);
     this.onNewPlayerBullet = this.onNewPlayerBullet.bind(this);
     this.onEnemyKilled = this.onEnemyKilled.bind(this);
 
-    this.startTime = null;
-    this.gameEnded = false;
-    this.canvas = document.getElementById('screen');
-    this.canvas.width = CANVAS_WIDTH;
-    this.canvas.height = CANVAS_HEIGHT;
-    this.ctx = this.canvas.getContext('2d');
+    this.onGameOver = onGameOver;
 
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+  }
+
+  start() {
     this.playerShip = new PlayerShip(this.onNewPlayerBullet);
     this.enemyFleet = new EnemyFleet(this.onNewEnemyBullet, this.onEnemyKilled);
     this.barriers = this.constructBarriers();
     this.enemyBullets = [];
-
     this.scoreKeeper = new ScoreKeeper();
-  }
 
-  start() {
     // Initialize objects.
     this.playerShip.start();
     this.enemyFleet.start();
 
     // Begin loop.
     this.startGameLoop();
+  }
+
+  stop() {
+    this.playerShip.stop();
+    this.onGameOver(this.scoreKeeper.getScore());
   }
 
   nextLevel() {
@@ -39,12 +41,12 @@ class SpaceGame {
   }
 
   startGameLoop() {
-    this.startTime = performance.now();
+    const startTime = performance.now();
 
     let ticksLastTime = 0;
     const gameLoop = (timestamp) => {
       this.clearScreen();
-      const secondsSinceStart = (timestamp - this.startTime) / 1000;
+      const secondsSinceStart = (timestamp - startTime) / 1000;
       const ticksSinceStart = Math.floor(secondsSinceStart / SECONDS_PER_TICK);
       const ticksDelta = ticksSinceStart - ticksLastTime;
 
@@ -99,7 +101,7 @@ class SpaceGame {
         requestAnimationFrame(gameLoop);
       } else {
         // Game over
-        this.clearScreen();
+        this.stop();
       }
     };
 

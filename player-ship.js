@@ -3,6 +3,7 @@ const PLAYER_SHIP_WIDTH = 40;
 const PLAYER_SHIP_UPDATE_PIXELS_PER_TICK = 4;
 const PLAYER_SHIP_RIGHT_BOUND = CANVAS_WIDTH - PLAYER_SHIP_WIDTH;
 const PLAYER_SHIP_LEFT_BOUND = 0;
+const PLAYER_MAX_HEALTH = 3;
 
 class PlayerShip extends Rectangle {
   constructor(onNewBullet) {
@@ -18,14 +19,20 @@ class PlayerShip extends Rectangle {
 
   start() {
     this.restart();
+    this.health = PLAYER_MAX_HEALTH;
     document.addEventListener('keyup', this.onKeyUp);
     document.addEventListener('keydown', this.onKeyDown);
   }
 
   restart() {
-    this.health = 3;
+    this.health = Math.max(this.health + 1, PLAYER_MAX_HEALTH);
     this.xVelocity = 0;
     this.arrowsPressed = [];
+  }
+
+  stop() {
+    document.removeEventListener('keyup', this.onKeyUp);
+    document.removeEventListener('keydown', this.onKeyDown);
   }
 
   update(dt) {
@@ -52,7 +59,7 @@ class PlayerShip extends Rectangle {
   }
 
   render(ctx) {
-    if (this.health === 3) {
+    if (this.health >= PLAYER_MAX_HEALTH) {
       ctx.fillStyle = 'hotpink';
     } else if (this.health === 2) {
       ctx.fillStyle = 'yellow';

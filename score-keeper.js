@@ -15,4 +15,8 @@ class ScoreKeeper {
     ctx.textAlign = 'right';
     ctx.fillText(`SCORE: ${this.score}`, X_POSITION, Y_POSITION);
   }
+
+  getScore() {
+    return this.score;
+  }
 }

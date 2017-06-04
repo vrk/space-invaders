@@ -1,2 +1,1 @@
-const game = new SpaceGame();
-game.start();
+const app = new App();
