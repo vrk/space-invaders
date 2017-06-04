@@ -12,7 +12,7 @@ class App {
 
     const textScreen = new TextWriter(this.ctx);
     textScreen.writeLine('BLOCK INVADERS');
-    textScreen.writeLine('Press space to start');
+    textScreen.writeLine('Press ENTER to start');
     this.listenForStartGame();
   }
 
@@ -23,7 +23,7 @@ class App {
     textScreen.writeLine('GAME OVER');
     textScreen.writeLine(`SCORE: ${score}`);
     textScreen.writeLine();
-    textScreen.writeLine('Press space to play again');
+    textScreen.writeLine('Press ENTER to play again');
 
     this.listenForStartGame();
   }
@@ -38,7 +38,7 @@ class App {
 
   onKeyUp(event) {
     const key = event.key;
-    if (key === ' ') {
+    if (key === 'Enter') {
       this.startGame();
     }
   }
