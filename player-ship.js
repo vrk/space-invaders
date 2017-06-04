@@ -25,7 +25,7 @@ class PlayerShip extends Rectangle {
   }
 
   restart() {
-    this.health = Math.max(this.health + 1, PLAYER_MAX_HEALTH);
+    this.health = Math.min(this.health + 1, PLAYER_MAX_HEALTH);
     this.xVelocity = 0;
     this.arrowsPressed = [];
   }
